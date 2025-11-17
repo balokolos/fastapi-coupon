@@ -28,5 +28,3 @@ build/
 *.db
 test.py
 .env
-
-.env
