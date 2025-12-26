@@ -1,0 +1,104 @@
+name: CI/CD Docker + Helm
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    types: [ closed ]
+
+jobs:
+  docker-helm:
+    if: github.event.pull_request.merged == true  # Only run if PR merged
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----------------------------
+      # 1️⃣ Checkout main repo
+      # ----------------------------
+      - uses: actions/checkout@v4
+
+      # ----------------------------
+      # 2️⃣ Install Python & dependencies
+      # ----------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      # ----------------------------
+      # 3️⃣ Run Unit Tests
+      # ----------------------------
+      - name: Run Unit Tests
+        run: pytest -q tests/
+
+      # ----------------------------
+      # 4️⃣ Read version file
+      # ----------------------------
+      - name: Read version file
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+
+      # ----------------------------
+      # 5️⃣ Docker login
+      # ----------------------------
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ----------------------------
+      # 6️⃣ Set up Buildx
+      # ----------------------------
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ----------------------------
+      # 7️⃣ Build & Push Docker image
+      # ----------------------------
+      - name: Build & Push Docker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            balokolos/fastapi-oracle:latest
+            balokolos/fastapi-oracle:${{ env.VERSION }}
+
+      # # ----------------------------
+      # # 8️⃣ Update Helm Chart version
+      # # ----------------------------
+      # - name: Update Helm Chart version
+      #   run: |
+      #     sed -i "s/^version:.*/version: ${{ env.VERSION }}/" helm_app_folder/Chart.yaml
+      #     sed -i "s/^appVersion:.*/appVersion: ${{ env.VERSION }}/" helm_app_folder/Chart.yaml
+
+      # # ----------------------------
+      # # 9️⃣ Push Helm chart to another repo
+      # # ----------------------------
+      # - name: Push Helm chart to target repo
+      #   env:
+      #     TARGET_REPO: ${{ secrets.HELM_REPO }}  # e.g., HTTPS with PAT or SSH
+      #     TARGET_BRANCH: main
+      #   run: |
+      #     git config --global user.name "github-actions"
+      #     git config --global user.email "actions@github.com"
+
+      #     # Clone target repo
+      #     git clone $TARGET_REPO temp-helm
+      #     cd temp-helm
+
+      #     # Copy updated helm chart
+      #     cp -r ../helm_app_folder/* ./  # adjust if needed
+
+      #     # Commit & push
+      #     git add .
+      #     git commit -m "Update Helm chart version ${{ env.VERSION }}" || echo "No changes to commit"
+      #     git push origin $TARGET_BRANCH
+
+      #     # Tag the Helm chart
+      #     git tag v${{ env.VERSION }}
+      #     git push origin v${{ env.VERSION }}
