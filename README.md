@@ -6,7 +6,8 @@ uvicorn app.main:app --reload
 http://127.0.0.1:8000/employee?emp_id=100
 
 -----------------------------
-#If using Instant Client
+
+# If using Instant Client
 
 Current code does not use instant client. Please google to learn about insatnt client.
 
@@ -41,6 +42,12 @@ docker tag fastapi-oracle balokolos/fastapi-oracle:latest
 
 docker push balokolos/fastapi-oracle:v1.0.0
 docker push balokolos/fastapi-oracle:latest
+
+-----------------------------
+
+# Helm
+
+helm install app-coupon ./helm-app-coupon/
 
 
 
